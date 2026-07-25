@@ -14,8 +14,7 @@ A learning/course repository for LangChain, managed with `uv`. Exercises live as
 - Run any script inside the project's venv: `uv run <script.py>`
 - Format code: `uv run ruff format .`
 - Lint (and autofix): `uv run ruff check --fix .`
-
-There is no test suite configured yet.
+- Run tests: `uv run pytest` (add `-m "not integration"` to skip tests that require a locally running Ollama model)
 
 ## Environment
 
