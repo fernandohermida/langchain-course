@@ -1,14 +1,13 @@
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 
 load_dotenv()
 
 
 def main():
-    llm = ChatOllama(model="gemma3:270m", temperature=0)   
-   # llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = ChatOllama(model="gemma3:270m", temperature=0)
+    # llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
     information = """Lionel Andrés Messi Cuccittini (Rosario, 24 de junio de 1987), conocido como Leo Messi, es un futbolista argentino que juega como delantero o centrocampista. Desde 2023, integra el plantel del Inter Miami de la MLS canadoestadounidense. Es también internacional con la selección de Argentina, de la que es capitán.
 

@@ -12,8 +12,8 @@ A learning/course repository for LangChain, managed with `uv`. The project is cu
 - Add a dependency: `uv add <package>`
 - Sync the environment after pulling changes (installs deps from `uv.lock`): `uv sync`
 - Run any script inside the project's venv: `uv run <script.py>`
-- Format code: `uv run black .`
-- Sort imports: `uv run isort .`
+- Format code: `uv run ruff format .`
+- Lint (and autofix): `uv run ruff check --fix .`
 
 There is no test suite configured yet.
 
@@ -22,4 +22,4 @@ There is no test suite configured yet.
 - Python `>=3.12` (pinned to 3.12 in `.python-version`).
 - Dependencies are declared in `pyproject.toml` and locked in `uv.lock` — always add packages via `uv add` rather than editing `pyproject.toml` by hand, so the lockfile stays in sync.
 - Key dependencies: `langchain`, `langchain-openai`, `python-dotenv` — expect API keys (e.g. `OPENAI_API_KEY`) to be loaded from a `.env` file via `python-dotenv` rather than hardcoded.
-- `black` and `isort` are dev dependencies for formatting; no config overrides are set, so both run with their defaults.
+- `ruff` is a dev dependency handling both formatting and linting; config lives in `[tool.ruff]` in `pyproject.toml`.
