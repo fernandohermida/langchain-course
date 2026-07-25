@@ -30,7 +30,7 @@ def summarize_person(llm: BaseChatModel, information: str) -> str:
     prompt = ChatPromptTemplate.from_template(SUMMARY_TEMPLATE)
     chain = prompt | llm
     response = chain.invoke(input={"information": information})
-    return response.content
+    return str(response.content)
 
 
 def main() -> None:
