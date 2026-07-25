@@ -21,4 +21,5 @@ A learning/course repository for LangChain, managed with `uv`. Exercises live as
 - Python `>=3.12` (pinned to 3.12 in `.python-version`).
 - Dependencies are declared in `pyproject.toml` and locked in `uv.lock` — always add packages via `uv add` rather than editing `pyproject.toml` by hand, so the lockfile stays in sync.
 - Key dependencies: `langchain`, `langchain-openai`, `python-dotenv` — expect API keys (e.g. `OPENAI_API_KEY`) to be loaded from a `.env` file via `python-dotenv` rather than hardcoded.
+- Copy `.env.example` to `.env` and fill in keys. Set `LANGCHAIN_TRACING_V2=true` plus `LANGCHAIN_API_KEY` to see full prompt/response traces for each chain call in the [LangSmith](https://smith.langchain.com) UI — `langsmith` is already a dependency and reads these vars automatically once `load_dotenv()` runs.
 - `ruff` is a dev dependency handling both formatting and linting; config lives in `[tool.ruff]` in `pyproject.toml`.
