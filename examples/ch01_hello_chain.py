@@ -1,15 +1,11 @@
 from dotenv import load_dotenv
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 
 load_dotenv()
 
-
-def main():
-    llm = ChatOllama(model="gemma3:270m", temperature=0)
-    # llm = ChatOpenAI(model="gpt-4o", temperature=0)
-
-    information = """Lionel Andrés Messi Cuccittini (Rosario, 24 de junio de 1987), conocido como Leo Messi, es un futbolista argentino que juega como delantero o centrocampista. Desde 2023, integra el plantel del Inter Miami de la MLS canadoestadounidense. Es también internacional con la selección de Argentina, de la que es capitán.
+INFORMATION = """Lionel Andrés Messi Cuccittini (Rosario, 24 de junio de 1987), conocido como Leo Messi, es un futbolista argentino que juega como delantero o centrocampista. Desde 2023, integra el plantel del Inter Miami de la MLS canadoestadounidense. Es también internacional con la selección de Argentina, de la que es capitán.
 
 Considerado con frecuencia el mejor jugador del mundo y uno de los mejores de todos los tiempos,[11] es el único en la historia que ha ganado, entre otras distinciones, ocho veces el Balón de Oro, ocho premios de la FIFA al mejor jugador del mundo, seis Botas de Oro y dos Balones de Oro de la Copa Mundial de Fútbol. En 2020, se convirtió en el primer futbolista y el primer argentino en recibir un premio Laureus y fue incluido en el Dream Team del Balón de Oro.
 
@@ -23,19 +19,23 @@ Como internacional argentino, ha representado a su país en catorce torneos mayo
 
 El 16 de junio, en el primer partido de Argentina contra Argelia en la Copa Mundial de Fútbol de 2026, pasó a ser el segundo futbolista en participar en seis mundiales de la FIFA e igualó el récord de Miroslav Klose de dieciséis goles."""
 
-    summary_template = """
-        Given the information {information} about a person, I want you to create:
-        1. A short summary
-        2. Two interesting facts about them
-    """
+SUMMARY_TEMPLATE = """
+    Given the information {information} about a person, I want you to create:
+    1. A short summary
+    2. Two interesting facts about them
+"""
 
-    prompt = ChatPromptTemplate.from_template(summary_template)
 
+def summarize_person(llm: BaseChatModel, information: str) -> str:
+    prompt = ChatPromptTemplate.from_template(SUMMARY_TEMPLATE)
     chain = prompt | llm
-
     response = chain.invoke(input={"information": information})
+    return response.content
 
-    print(response.content)
+
+def main() -> None:
+    llm = ChatOllama(model="gemma3:270m", temperature=0)
+    print(summarize_person(llm, INFORMATION))
 
 
 if __name__ == "__main__":

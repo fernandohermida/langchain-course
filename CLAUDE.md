@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A learning/course repository for LangChain, managed with `uv`. The project is currently a minimal skeleton (single `main.py` entry point) — expect it to grow into multiple LangChain examples/exercises as the course progresses.
+A learning/course repository for LangChain, managed with `uv`. Exercises live as standalone scripts under `examples/` (e.g. `examples/ch01_hello_chain.py`) — expect more to be added as the course progresses.
 
 ## Commands
 
-- Run the app: `uv run main.py`
+- Run an example: `uv run examples/ch01_hello_chain.py`
 - Add a dependency: `uv add <package>`
 - Sync the environment after pulling changes (installs deps from `uv.lock`): `uv sync`
 - Run any script inside the project's venv: `uv run <script.py>`
