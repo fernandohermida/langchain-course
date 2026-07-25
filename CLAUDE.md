@@ -15,6 +15,8 @@ A learning/course repository for LangChain, managed with `uv`. Exercises live as
 - Format code: `uv run ruff format .`
 - Lint (and autofix): `uv run ruff check --fix .`
 - Run tests: `uv run pytest` (add `-m "not integration"` to skip tests that require a locally running Ollama model)
+- Type-check: `uv run pyright`
+- Install git hooks (one-time): `uv run pre-commit install`
 
 ## Environment
 
