@@ -1,0 +1,25 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+A learning/course repository for LangChain, managed with `uv`. The project is currently a minimal skeleton (single `main.py` entry point) — expect it to grow into multiple LangChain examples/exercises as the course progresses.
+
+## Commands
+
+- Run the app: `uv run main.py`
+- Add a dependency: `uv add <package>`
+- Sync the environment after pulling changes (installs deps from `uv.lock`): `uv sync`
+- Run any script inside the project's venv: `uv run <script.py>`
+- Format code: `uv run black .`
+- Sort imports: `uv run isort .`
+
+There is no test suite configured yet.
+
+## Environment
+
+- Python `>=3.12` (pinned to 3.12 in `.python-version`).
+- Dependencies are declared in `pyproject.toml` and locked in `uv.lock` — always add packages via `uv add` rather than editing `pyproject.toml` by hand, so the lockfile stays in sync.
+- Key dependencies: `langchain`, `langchain-openai`, `python-dotenv` — expect API keys (e.g. `OPENAI_API_KEY`) to be loaded from a `.env` file via `python-dotenv` rather than hardcoded.
+- `black` and `isort` are dev dependencies for formatting; no config overrides are set, so both run with their defaults.
