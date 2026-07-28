@@ -1,28 +1,31 @@
+import json
+
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from tavily import TavilyClient
 
 load_dotenv()
 
-
-QUERY = "What's the weather in Tokyo?"
+tavily = TavilyClient()
+QUERY = "What's the weather in Tokyo now?"
 
 
 @tool
 def search(query: str) -> str:
-    """Search the internet for the given query.
+    """Tool that search over the internet.
 
     Args:
-        query: The search query.
+        query: The search to search.
 
     Returns:
         The search result.
     """
     print(query)
-    return "Tokyo weather is sunny right now."
+    return json.dumps(tavily.search(query=query))
 
 
 def build_search_agent(llm: BaseChatModel):
@@ -35,7 +38,7 @@ def run_query(agent, query: str):
 
 
 def main() -> None:
-    agent = build_search_agent(ChatOpenAI(model="gpt-5"))
+    agent = build_search_agent(ChatOpenAI(model="gpt-5", temperature=0))
     result = run_query(agent, QUERY)
     print(result)
 
