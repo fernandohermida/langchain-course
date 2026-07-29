@@ -20,9 +20,9 @@ This course takes you through building 7 real-world AI agent projects, from simp
 
 | Project | Type | Description |
 |---------|------|-------------|
-| 👋 [LangChain Hello World](https://github.com/emarco177/langchain-course/tree/project/hello-world) | Branch (`project/hello-world`) | Your first AI agent - basic structure and LLM integration |
-| 🔎  [Modern Search Agent](https://github.com/emarco177/ice_breaker/tree/project/search-agent) | Branch (`project/search-agent`) | Build search agents using LangChain v.1's `create_agent` interface with custom tools, Tavily integration, and structured outputs |
-| 🧠 [Agents Under The Hood](https://github.com/emarco177/langchain-course/tree/project/agents-under-the-hood) | Branch (`project/agents-under-the-hood`) | Understanding reasoning and acting patterns in AI agents |
+| 👋 [LangChain Hello World](examples/ch01_hello_chain.py) | `examples/ch01_hello_chain.py` | Your first AI agent - basic structure and LLM integration |
+| 🔎 Modern Search Agent | `examples/ch02_search_agent.py`, `_2.py`, `_job_agent.py` | Build search agents using LangChain v.1's `create_agent` interface with custom tools, Tavily integration, and structured outputs |
+| 🧠 Agent Loop Internals | `examples/ch03_agent_loop_langchain_tool_calling.py`, `ch03_agent_loop_raw_tool_calling.py` | The same tool-calling loop built twice — once with LangChain's abstractions, once against the raw model API — to see what an agent loop is actually doing under the hood |
 | 📄 [RAG Gist](https://github.com/emarco177/langchain-course/tree/project/rag-gist) | Branch (`project/rag-gist`) | The gist of retrieval-augmented generation |
 | 📚 [Documentation Helper](https://github.com/emarco177/documentation-helper) | External Repo | Intelligent documentation assistant |
 | 💻 [Code Interpreter](https://github.com/emarco177/langchain-course/tree/project/code-interpreter) | Branch (`project/code-interpreter`) | AI-powered code execution and analysis |
@@ -71,13 +71,19 @@ This course takes you through building 7 real-world AI agent projects, from simp
    ```
 2. **Choose your learning path**
    
-   **For branch-based projects:**
+   **For the consolidated `examples/` chapters (ch01–ch03):**
    ```bash
-   # Start with Hello World
-   git checkout project/hello-world
+   git checkout project/course-consolidated
    uv sync
-   uv run python main.py
-   
+   cp .env.example .env   # fill in the keys the chapter you're running needs
+
+   uv run examples/ch01_hello_chain.py
+   uv run examples/ch02_search_agent.py
+   uv run examples/ch03_agent_loop_langchain_tool_calling.py
+   ```
+
+   **For other branch-based projects:**
+   ```bash
    # Progress to Code Interpreter
    git checkout project/code-interpreter
    uv sync
