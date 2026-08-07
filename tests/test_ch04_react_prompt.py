@@ -7,106 +7,52 @@ def _chat_response(content: str):
     return SimpleNamespace(message=SimpleNamespace(content=content))
 
 
-def test_parse_model_output_handles_action_and_input_on_one_line():
+def test_parse_model_output_happy_path():
+    text = "Thought: I need the price.\nAction: get_product_price\nAction Input: laptop"
+
+    action, action_input, final_answer = ch04.parse_model_output(text)
+
+    assert action == "get_product_price"
+    assert action_input == "laptop"
+    assert final_answer is None
+
+
+def test_parse_model_output_returns_none_when_action_input_line_missing():
     text = 'Thought: I need the price.\nAction: get_product_price, product="smartphone"'
 
     action, action_input, final_answer = ch04.parse_model_output(text)
 
-    assert action == "get_product_price"
-    assert action_input == 'product="smartphone"'
+    assert action is None
+    assert action_input is None
     assert final_answer is None
 
 
-def test_parse_model_output_strips_call_syntax_when_action_input_line_present():
-    text = (
-        "Thought: I need the price.\n"
-        'Action: get_product_price(product="smartphone")\n'
-        'Action Input: product="smartphone"'
-    )
-
-    action, action_input, final_answer = ch04.parse_model_output(text)
-
-    assert action == "get_product_price"
-    assert action_input == 'product="smartphone"'
-    assert final_answer is None
-
-
-def test_parse_model_output_handles_call_syntax_without_action_input_line():
-    text = 'Thought: ...\nAction: get_product_price(product="smartphone")'
-
-    action, action_input, final_answer = ch04.parse_model_output(text)
-
-    assert action == "get_product_price"
-    assert action_input == 'product="smartphone"'
-
-
-def test_parse_model_output_handles_multi_arg_call_syntax_without_action_input_line():
-    text = 'Action: apply_discount(price=699.99, discount_tier="gold")'
-
-    action, action_input, final_answer = ch04.parse_model_output(text)
-
-    assert action == "apply_discount"
-    assert action_input == 'price=699.99, discount_tier="gold"'
-
-
-def test_run_agent_loop_recovers_when_action_and_input_are_on_one_line(monkeypatch):
+def test_run_agent_loop_executes_both_tools_then_returns_final_answer(monkeypatch):
     responses = iter(
         [
             _chat_response(
-                "Thought: I need the price.\n"
-                'Action: get_product_price, product="smartphone"'
+                "Thought: I need the laptop's price first.\n"
+                "Action: get_product_price\n"
+                "Action Input: laptop"
+            ),
+            _chat_response(
+                "Thought: Now I'll apply the gold discount.\n"
+                "Action: apply_discount\n"
+                "Action Input: 999.99, gold"
             ),
             _chat_response(
                 "Thought: I now know the final answer\n"
-                "Final Answer: The smartphone costs $699.99."
+                "Final Answer: The laptop costs $849.99 after the gold discount."
             ),
         ]
     )
     monkeypatch.setattr(ch04.ollama, "chat", lambda **_kwargs: next(responses))
 
-    result = ch04.run_agent_loop("How much is a smartphone?")
-
-    assert result == "The smartphone costs $699.99."
-
-
-def test_run_agent_loop_recovers_when_action_line_has_call_syntax(monkeypatch):
-    responses = iter(
-        [
-            _chat_response(
-                "Thought: I need the price.\n"
-                'Action: get_product_price(product="smartphone")\n'
-                'Action Input: product="smartphone"'
-            ),
-            _chat_response(
-                "Thought: I now know the final answer\n"
-                "Final Answer: The smartphone costs $699.99."
-            ),
-        ]
+    result = ch04.run_agent_loop(
+        "What is the price of a laptop after applying a gold discount?"
     )
-    monkeypatch.setattr(ch04.ollama, "chat", lambda **_kwargs: next(responses))
 
-    result = ch04.run_agent_loop("How much is a smartphone?")
-
-    assert result == "The smartphone costs $699.99."
-
-
-def test_run_agent_loop_stops_early_on_repeated_identical_failure(monkeypatch):
-    call_count = {"n": 0}
-
-    def fake_chat(**_kwargs):
-        call_count["n"] += 1
-        return _chat_response(
-            "Thought: I need the price.\n"
-            "Action: get_product_prise\n"
-            'Action Input: product="smartphone"'
-        )
-
-    monkeypatch.setattr(ch04.ollama, "chat", fake_chat)
-
-    result = ch04.run_agent_loop("How much is a smartphone?")
-
-    assert result is None
-    assert call_count["n"] == 2
+    assert result == "The laptop costs $849.99 after the gold discount."
 
 
 def test_call_model_disables_thinking_and_caps_output_length(monkeypatch):

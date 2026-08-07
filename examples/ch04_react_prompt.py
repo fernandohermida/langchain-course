@@ -207,19 +207,6 @@ def call_model(prompt: str) -> str:
     return response.message.content or ""
 
 
-_CALL_SYNTAX_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$")
-
-
-def _split_call_syntax(action_text: str) -> tuple[str, str | None]:
-    """Split a model-written call expression like 'toolname(args)' into
-    (bare_name, args_string). Returns (action_text, None) unchanged if
-    action_text is already a bare tool name with no trailing "(...)"."""
-    match = _CALL_SYNTAX_RE.match(action_text)
-    if not match:
-        return action_text, None
-    return match.group(1), match.group(2)
-
-
 def parse_model_output(text: str) -> tuple[str | None, str | None, str | None]:
     """Parse a raw completion into (action, action_input, final_answer).
 
@@ -238,43 +225,14 @@ def parse_model_output(text: str) -> tuple[str | None, str | None, str | None]:
         return None, None, final_answer_match.group(1).strip()
 
     action_match = re.search(r"Action:\s*(.+)", text)
-    if not action_match:
+    action_input_match = re.search(r"Action Input:\s*(.+)", text)
+    if not action_match or not action_input_match:
         # Neither a Final Answer nor a well-formed Action was found — the
         # model didn't follow the prompt's format. All three come back None
         # so the caller can detect this case and stop the loop.
         return None, None, None
-    action_line = action_match.group(1).strip()
 
-    action_input_match = re.search(r"Action Input:\s*(.+)", text)
-    if action_input_match:
-        # A separate "Action Input:" line always wins as the source of the
-        # input value. Some models *also* write call syntax on the Action
-        # line itself (e.g. 'get_product_price(product="smartphone")') even
-        # though a separate Action Input line follows — strip it down to the
-        # bare tool name so it resolves in `tools`, discarding the
-        # parenthetical's contents rather than merging them with the
-        # explicit Action Input line.
-        action_name, _ = _split_call_syntax(action_line)
-        return action_name, action_input_match.group(1).strip(), None
-
-    # No separate "Action Input:" line. Check call syntax *before* the
-    # comma-split fallback below: a multi-arg call like
-    # 'apply_discount(price=699.99, discount_tier="gold")' contains a comma,
-    # so naively comma-splitting it would cut the call in half. Treating the
-    # whole parenthesized expression as one action_input blob handles both
-    # single- and multi-arg calls correctly.
-    action_name, call_args = _split_call_syntax(action_line)
-    if call_args is not None:
-        return action_name, call_args.strip(), None
-
-    # Some models collapse the two lines into "Action: tool, args" instead of
-    # a separate "Action Input:" line. Fall back to splitting on the first
-    # comma rather than failing the whole iteration over a formatting quirk.
-    if "," not in action_line:
-        return None, None, None
-
-    action, action_input = action_line.split(",", 1)
-    return action.strip(), action_input.strip(), None
+    return action_match.group(1).strip(), action_input_match.group(1).strip(), None
 
 
 @traceable(name="ch04_react_prompt")
@@ -293,14 +251,6 @@ def run_agent_loop(query: str) -> str | None:
     # keeps getting extended with what the model said plus what really
     # happened when we ran its requested tool.
     scratchpad = ""
-
-    # temperature=0 means call_model is a pure function of (prompt + scratchpad).
-    # If the exact same (action, action_input) pair fails twice in a row, the
-    # model has nothing left to adapt to — this Observation was already in the
-    # scratchpad the first time and produced the identical broken output again.
-    # Stop after 2 tries instead of silently repeating the same doomed call
-    # MAX_ITERATIONS times.
-    previous_failed_call: tuple[str, str] | None = None
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         print(f"\n--- Iteration {iteration} ---")
@@ -343,20 +293,6 @@ def run_agent_loop(query: str) -> str | None:
                 observation = f"Error: {e}"
 
         print(f"  [Tool Result] {observation}")
-
-        current_call = (action, action_input)
-        if observation.startswith("Error:") and current_call == previous_failed_call:
-            print(
-                "ERROR: Model repeated the identical failing action "
-                f"{action!r} with input {action_input!r} on consecutive "
-                "iterations. temperature=0 makes this deterministic — it will "
-                "never self-correct — so stopping early instead of burning "
-                "the remaining iterations."
-            )
-            return None
-        previous_failed_call = (
-            current_call if observation.startswith("Error:") else None
-        )
 
         # Append what the model said *and* what actually happened, so the
         # next iteration's prompt continues right where this one left off.
