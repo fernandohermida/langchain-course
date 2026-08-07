@@ -1,4 +1,3 @@
-import inspect
 import re
 from collections.abc import Callable
 from typing import Literal
@@ -65,54 +64,14 @@ def apply_discount(price: float, discount_tier: DiscountTier) -> float:
     }
     if discount_tier not in discount_percentages:
         # Same "fail loudly" pattern as get_product_price above: an unknown
-        # tier becomes an Observation the model can react to (e.g. by asking
-        # the user, per STRICT RULE 4 in the prompt), instead of a raw KeyError
-        # traceback that would kill the whole agent loop.
+        # tier becomes an Observation the model can react to, instead of a
+        # raw KeyError traceback that would kill the whole agent loop.
         raise ValueError(
             f"Unknown discount tier '{discount_tier}'. "
             f"Available tiers: {', '.join(discount_percentages)}"
         )
 
     return round(price * (1 - discount_percentages[discount_tier]), 2)
-
-
-def get_tools_description_new(tools_dict: dict[str, Callable]) -> str:
-    """Generate a description of the available tools for the model prompt.
-
-    Uses inspect.signature() instead of a hand-written description per tool,
-    so the prompt can't silently drift out of sync with a tool's actual
-    parameters. Each annotation is rendered via str() rather than collapsed
-    to a bare type name, so a Literal/enum constraint (e.g. discount_tier:
-    Literal["bronze", "silver", ...]) stays visible in the rendered text
-    instead of collapsing to a bare "string".
-
-    inspect.unwrap() strips decorators like @traceable before inspecting —
-    otherwise inspect.signature() picks up the wrapper's own __signature__
-    (with its injected `config` kwarg) instead of the tool's real params,
-    the exact pitfall called out in ch03_agent_loop_raw_tool_calling.py's
-    TOOLS-schema comment.
-    """
-    descriptions = []
-    for tool_name, tool_func in tools_dict.items():
-        signature = inspect.signature(inspect.unwrap(tool_func))
-        params = ", ".join(
-            f"{name}: {_annotation_text(param.annotation)}"
-            for name, param in signature.parameters.items()
-        )
-        first_doc_line = next(iter((tool_func.__doc__ or "").strip().splitlines()), "")
-        descriptions.append(f"{tool_name}({params}): {first_doc_line}")
-    return "\n".join(descriptions)
-
-
-def _annotation_text(annotation: object) -> str:
-    if annotation is inspect.Parameter.empty:
-        return "Any"
-    # typing generics like Literal[...] expose a __name__ too, but it's just
-    # the bare special-form name ("Literal") — str() is what actually shows
-    # the constrained values, so __name__ is only used for plain classes.
-    if isinstance(annotation, type):
-        return annotation.__name__
-    return str(annotation)
 
 
 # Annotated Callable[..., float] (rather than left to inference) because the
@@ -124,7 +83,11 @@ tools: dict[str, Callable[..., float]] = {
     "apply_discount": apply_discount,
 }
 tool_names = ", ".join(tools.keys())
-tool_descriptions = get_tools_description_new(tools)
+tool_descriptions = (
+    "get_product_price(product): looks up the real price of a product.\n"
+    "apply_discount(price, discount_tier): applies a discount "
+    "(bronze, silver, gold, platinum, diamond) to a price."
+)
 
 REACT_PROMPT_TEMPLATE = f"""
 STRICT RULES — you must follow these exactly:
@@ -135,9 +98,6 @@ STRICT RULES — you must follow these exactly:
    do NOT pass a made-up number.
 3. NEVER calculate discounts yourself using math. Always use the
    apply_discount tool.
-4. If the user does not specify a discount tier, do NOT call a tool to ask —
-   there is no tool for that. Instead, skip straight to "Final Answer:" and
-   ask the user which tier to use. Do NOT assume one.
 
 Answer the following questions as best you can. You have access to the following tools:
 
@@ -305,16 +265,4 @@ def run_agent_loop(query: str) -> str | None:
 if __name__ == "__main__":
     print("Starting the agent loop...(raw ReAct prompting)")
     print()
-
-    demo_queries: list[str] = [
-        # Happy path: both tools get called in the required order (price
-        # first, then discount), exercising STRICT RULES 1-3.
-        "What is the price of a laptop after applying a gold discount?",
-        # No tier specified: exercises STRICT RULE 4 — the model should ask
-        # which discount tier to use rather than guessing one.
-        "What is the price of a smartphone with a discount applied?",
-    ]
-
-    for i, demo_query in enumerate(demo_queries, start=1):
-        print(f"\n{'=' * 70}\nDemo {i}/{len(demo_queries)}: {demo_query}\n{'=' * 70}")
-        run_agent_loop(demo_query)
+    run_agent_loop("What is the price of a laptop after applying a gold discount?")
