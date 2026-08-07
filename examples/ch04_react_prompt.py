@@ -122,45 +122,32 @@ Thought:"""
 
 # CHANGE 4: Drop tools= from ollama.chat(). The LLM has no idea it's an agent —
 # all agency comes from the prompt above and our regex parsing below.
-@traceable(name="Ollama Chat", run_type="llm")
-def ollama_chat_traced(model, messages, options):
-    # think=False: qwen3 is a reasoning model that emits its own <think> block
-    # by default, on top of the ReAct prompt's own "Thought:" step. When the
-    # model gets confused (e.g. after a tool-not-found Observation), that
-    # native reasoning can run on for a very long time — and since it never
-    # naturally produces "\nObservation", the "stop" option below never
-    # triggers either. We only want the one, plain-text ReAct Thought.
-    return ollama.chat(model=model, messages=messages, think=False, options=options)
-
-
-# IMPROVEMENT over the original exercise: call_model no longer carries its own
-# run_type="llm" trace. It's plumbing (build messages, pick sampling options),
-# not the actual network call — that already happens, and is already traced,
-# inside ollama_chat_traced (CHANGE 4). Tracing both as "llm" spans would nest
-# two LLM-looking runs around a single real completion, which is confusing to
-# read in LangSmith. A plain "chain" trace keeps call_model visible in the
-# trace tree without double-counting the LLM call itself.
-@traceable(name="call_model", run_type="chain")
+# CHANGE 5: One prompt string replaces the system/user message split from
+# ch02/ch03. ollama.chat still requires a `messages` list, so the entire
+# ReAct prompt — instructions, tool descriptions, and the scratchpad built up
+# so far — travels as a single "user" message rather than being split across
+# system/user/tool roles.
+@traceable(name="call_model", run_type="llm")
 def call_model(prompt: str) -> str:
     """Call the model with a plain-text completion (no `tools=` schema — the
     model can only ever be *steered* via the prompt text itself)."""
-    # CHANGE 5: One prompt string replaces the system/user message split from
-    # ch02/ch03. ollama.chat still requires a `messages` list, so the entire
-    # ReAct prompt — instructions, tool descriptions, and the scratchpad built
-    # up so far — travels as a single "user" message rather than being split
-    # across system/user/tool roles.
-    response = ollama_chat_traced(
+    response = ollama.chat(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
-        # The "stop" option cuts generation off as soon as the model starts
-        # writing "\nObservation" itself. Without it, a plain-text completion
-        # model has nothing stopping it from *hallucinating* a tool result —
-        # we need to inject the real Observation ourselves, in run_agent_loop.
-        # num_predict is a hard backstop: a ReAct step is a handful of lines,
-        # so nothing legitimate needs more than this — it exists purely so a
-        # confused/rambling completion can't run unbounded (Ollama's default
-        # is -1, i.e. no limit) even if "stop" never matches.
-        options={"stop": ["\nObservation"], "temperature": 0, "num_predict": 300},
+        # think=False: qwen3 is a reasoning model that would otherwise emit
+        # its own <think> block on top of our "Thought:" step, sometimes at
+        # unbounded length.
+        think=False,
+        options={
+            # "stop" cuts generation off as soon as the model starts writing
+            # "\nObservation" itself — without it, the model could hallucinate
+            # a tool result instead of waiting for the real one we inject in
+            # run_agent_loop. num_predict is a hard backstop so a confused
+            # completion can't run forever even if "stop" never matches.
+            "stop": ["\nObservation"],
+            "temperature": 0,
+            "num_predict": 300,
+        },
     )
     # ollama types Message.content as `str | None`; an empty completion is
     # still a valid (if useless) string for parse_model_output to fail on.
