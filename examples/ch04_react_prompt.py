@@ -34,9 +34,10 @@ def get_product_price(product: str) -> float:
     return prices[normalized]
 
 
-# Valid tiers live in the type hint (not just the docstring) so the tool
-# schema below can list them as an enum — the model is structurally
-# discouraged from inventing a tier before the tool ever runs.
+# Valid tiers live in the type hint (not just the docstring) purely for the
+# reader — this file has no tools= schema, so nothing here actually stops
+# the model from inventing a made-up tier. apply_discount's own tier check
+# below is what turns an invalid tier into a visible Observation.
 DiscountTier = Literal["bronze", "silver", "gold", "platinum", "diamond"]
 
 
@@ -213,16 +214,13 @@ def run_agent_loop(query: str) -> str | None:
 
         if action is None or action_input is None:
             print("ERROR: Could not parse Action/Action Input from LLM output")
-            break
+            return None
 
         print(f"  [Tool Selected] {action} with args: {action_input}")
 
         # Action Input is "comma separated values" per the prompt's format
-        # instructions. Some models echo "key=value" pairs instead of bare
-        # values (e.g. "product=laptop") — strip an optional "key=" prefix so
-        # both styles resolve to the same positional args.
-        raw_args = [arg.strip() for arg in action_input.split(",")]
-        args = [arg.split("=", 1)[-1].strip().strip("'\"") for arg in raw_args]
+        # instructions.
+        args = [arg.strip() for arg in action_input.split(",")]
 
         print(f"  [Tool Executing] {action}({args})...")
         if action not in tools:
@@ -252,4 +250,8 @@ def run_agent_loop(query: str) -> str | None:
 if __name__ == "__main__":
     print("Starting the agent loop...(raw ReAct prompting)")
     print()
+    # A model this small doesn't always follow every STRICT RULE — it may
+    # answer after get_product_price without ever calling apply_discount.
+    # That's a real limitation of prompting a 1.7B model, not a bug in this
+    # loop.
     run_agent_loop("What is the price of a laptop after applying a gold discount?")
